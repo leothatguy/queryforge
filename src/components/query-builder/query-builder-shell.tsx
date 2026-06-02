@@ -6,6 +6,14 @@ import { generateSqlQuery, stringifyMongoQuery } from "@/lib/query/generate";
 import type { QueryRow, QueryTreeState } from "@/lib/query/types";
 import { validateQueryState } from "@/lib/query/validate";
 import { queryPresets } from "@/lib/presets/query-presets";
+import {
+  createSavedQueryPreset,
+  MAX_SAVED_PRESETS,
+  parseSavedQueryPresets,
+  SAVED_PRESETS_STORAGE_KEY,
+  type SavedQueryPreset,
+  serializeSavedQueryPresets,
+} from "@/lib/presets/saved-presets";
 import { dataSources, getDataSourceById } from "@/lib/schemas/catalog";
 import {
   createInitialQueryState,
@@ -33,6 +41,8 @@ export function QueryBuilderShell() {
   const [hasExecuted, setHasExecuted] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [savedPresets, setSavedPresets] = useState<SavedQueryPreset[]>([]);
+  const [hasLoadedSavedPresets, setHasLoadedSavedPresets] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
 
@@ -42,6 +52,9 @@ export function QueryBuilderShell() {
   const mongoPreview = useMemo(() => stringifyMongoQuery(state, source), [source, state]);
   const exportText = useMemo(() => JSON.stringify(state, null, 2), [state]);
   const activePresets = queryPresets.filter((preset) => preset.sourceId === state.sourceId);
+  const activeSavedPresets = savedPresets.filter(
+    (preset) => preset.sourceId === state.sourceId,
+  );
 
   const executeCurrentQuery = useCallback(() => {
     setIsExecuting(true);
@@ -66,6 +79,23 @@ export function QueryBuilderShell() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSavedPresets(parseSavedQueryPresets(localStorage.getItem(SAVED_PRESETS_STORAGE_KEY)));
+      setHasLoadedSavedPresets(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedSavedPresets) {
+      return;
+    }
+
+    localStorage.setItem(SAVED_PRESETS_STORAGE_KEY, serializeSavedQueryPresets(savedPresets));
+  }, [hasLoadedSavedPresets, savedPresets]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -106,6 +136,19 @@ export function QueryBuilderShell() {
     setResults([]);
     setHasExecuted(false);
     dispatch({ type: "replace-state", state: result.state });
+  }
+
+  function restoreQueryState(nextState: QueryTreeState) {
+    setResults([]);
+    setHasExecuted(false);
+    dispatch({ type: "replace-state", state: nextState });
+  }
+
+  function saveCurrentQueryPreset() {
+    setSavedPresets((items) => [
+      createSavedQueryPreset(state, source.label, activeSavedPresets.length),
+      ...items,
+    ].slice(0, MAX_SAVED_PRESETS));
   }
 
   return (
@@ -157,13 +200,52 @@ export function QueryBuilderShell() {
                     className="button-secondary"
                     type="button"
                     onClick={() => {
-                      setResults([]);
-                      setHasExecuted(false);
-                      dispatch({ type: "replace-state", state: preset.createState() });
+                      restoreQueryState(preset.createState());
                     }}
                   >
                     {preset.label}
                   </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="panel-section">
+            <div className="panel-title">
+              Saved Presets
+              <button className="button-secondary" type="button" onClick={saveCurrentQueryPreset}>
+                Save
+              </button>
+            </div>
+            {activeSavedPresets.length === 0 ? (
+              <div className="empty-state">No saved presets.</div>
+            ) : null}
+            <ul className="preset-list">
+              {activeSavedPresets.map((preset) => (
+                <li className="preset-item" key={preset.id}>
+                  <div className="inline-fields">
+                    <span>{preset.label}</span>
+                    <span className="type-pill">{source.label}</span>
+                  </div>
+                  <div className="toolbar">
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => restoreQueryState(preset.state)}
+                    >
+                      Restore
+                    </button>
+                    <button
+                      className="button-danger"
+                      type="button"
+                      onClick={() =>
+                        setSavedPresets((items) =>
+                          items.filter((item) => item.id !== preset.id),
+                        )
+                      }
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
