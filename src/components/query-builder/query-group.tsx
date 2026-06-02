@@ -32,7 +32,7 @@ export const QueryGroup = memo(function QueryGroup({
   const canRemove = group.id !== rootId;
 
   return (
-    <div className="group" style={{ marginLeft: depth ? 8 : 0 }}>
+    <div className="group" data-depth={depth} style={{ marginLeft: depth ? 8 : 0 }}>
       <div className="group-header">
         <div className="group-meta">
           <select

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { executeQuery } from "@/lib/query/evaluate";
 import { generateSqlQuery, stringifyMongoQuery } from "@/lib/query/generate";
@@ -36,7 +37,6 @@ export function QueryBuilderShell() {
   const [state, dispatch] = useReducer(queryReducer, undefined, () =>
     createInitialQueryState("users"),
   );
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [results, setResults] = useState<QueryRow[]>([]);
   const [hasExecuted, setHasExecuted] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -75,10 +75,6 @@ export function QueryBuilderShell() {
       ].slice(0, 8));
     }, 320);
   }, [source, state, validationIssues.length]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -154,21 +150,14 @@ export function QueryBuilderShell() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand">
+        <Link href="/" className="brand" style={{ textDecoration: "none" }}>
           <span className="brand-mark">QF</span>
           <div>
             <h1>QueryForge</h1>
             <p>Visual query builder</p>
           </div>
-        </div>
+        </Link>
         <div className="toolbar">
-          <button
-            className="button-secondary"
-            type="button"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          >
-            {theme === "light" ? "Dark" : "Light"}
-          </button>
           <button
             className="button"
             disabled={isExecuting || validationIssues.length > 0}
@@ -180,8 +169,9 @@ export function QueryBuilderShell() {
         </div>
       </header>
 
-      <div className="workspace">
-        <aside className="panel">
+      <div className="ide-layout">
+        <div className="ide-main">
+          <aside className="panel ide-sidebar">
           <SchemaSelector
             onChange={(sourceId) => {
               setResults([]);
@@ -271,9 +261,25 @@ export function QueryBuilderShell() {
               ))}
             </ul>
           </div>
+          <div className="panel-section">
+            <div className="panel-title">Export</div>
+            <textarea className="textarea" readOnly value={exportText} />
+          </div>
+          <div className="panel-section">
+            <div className="panel-title">Import</div>
+            <textarea
+              className="textarea"
+              value={importText}
+              onChange={(event) => setImportText(event.target.value)}
+            />
+            {importError ? <p className="issue-item">{importError}</p> : null}
+            <button className="button-secondary" type="button" onClick={importQuery}>
+              Import JSON
+            </button>
+          </div>
         </aside>
 
-        <section className="panel builder-panel">
+        <section className="panel ide-canvas builder-panel">
           <div className="builder-header">
             <div>
               <h2>{source.label}</h2>
@@ -309,8 +315,10 @@ export function QueryBuilderShell() {
             />
           </div>
         </section>
+        </div>
 
-        <aside className="panel inspector-panel">
+        <div className="ide-bottom-panel">
+          <aside className="panel" style={{ display: "flex", flexDirection: "column" }}>
           <QueryPreview mongo={mongoPreview} sql={sqlPreview} />
           <div className="panel-section">
             <div className="panel-title">Validation</div>
@@ -326,29 +334,17 @@ export function QueryBuilderShell() {
               </ul>
             )}
           </div>
-          <ResultsPanel
-            hasExecuted={hasExecuted}
-            isExecuting={isExecuting}
-            results={results}
-            source={source}
-          />
-          <div className="panel-section">
-            <div className="panel-title">Export</div>
-            <textarea className="textarea" readOnly value={exportText} />
-          </div>
-          <div className="panel-section">
-            <div className="panel-title">Import</div>
-            <textarea
-              className="textarea"
-              value={importText}
-              onChange={(event) => setImportText(event.target.value)}
+          </aside>
+
+          <div className="panel" style={{ display: "flex", flexDirection: "column" }}>
+            <ResultsPanel
+              hasExecuted={hasExecuted}
+              isExecuting={isExecuting}
+              results={results}
+              source={source}
             />
-            {importError ? <p className="issue-item">{importError}</p> : null}
-            <button className="button-secondary" type="button" onClick={importQuery}>
-              Import JSON
-            </button>
           </div>
-        </aside>
+        </div>
       </div>
     </main>
   );
