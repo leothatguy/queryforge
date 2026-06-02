@@ -144,28 +144,24 @@ function allocateNodeId(state: QueryTreeState, prefix: "rule" | "group") {
   return { id, nextId: nextId + 1 };
 }
 
-function deleteSubtree(nodes: Record<NodeId, QueryNode>, nodeId: NodeId) {
+function collectSubtreeIds(
+  nodes: Record<NodeId, QueryNode>,
+  nodeId: NodeId,
+  idsToDelete = new Set<NodeId>(),
+) {
   const node = nodes[nodeId];
 
   if (!node) {
-    return;
+    return idsToDelete;
   }
+
+  idsToDelete.add(nodeId);
 
   if (node.kind === "group") {
-    node.childIds.forEach((childId) => deleteSubtree(nodes, childId));
+    node.childIds.forEach((childId) => collectSubtreeIds(nodes, childId, idsToDelete));
   }
 
-  delete nodes[nodeId];
-}
-
-function removeNodeReference(nodes: Record<NodeId, QueryNode>, nodeId: NodeId) {
-  Object.values(nodes).forEach((node) => {
-    if (node.kind !== "group") {
-      return;
-    }
-
-    node.childIds = node.childIds.filter((childId) => childId !== nodeId);
-  });
+  return idsToDelete;
 }
 
 export function queryReducer(state: QueryTreeState, action: QueryAction): QueryTreeState {
@@ -232,9 +228,24 @@ export function queryReducer(state: QueryTreeState, action: QueryAction): QueryT
       return state;
     }
 
-    const nodes = { ...state.nodes };
-    removeNodeReference(nodes, action.nodeId);
-    deleteSubtree(nodes, action.nodeId);
+    const idsToDelete = collectSubtreeIds(state.nodes, action.nodeId);
+    const nodes = Object.fromEntries(
+      Object.entries(state.nodes)
+        .filter(([nodeId]) => !idsToDelete.has(nodeId))
+        .map(([nodeId, node]) => {
+          if (node.kind !== "group") {
+            return [nodeId, node];
+          }
+
+          return [
+            nodeId,
+            {
+              ...node,
+              childIds: node.childIds.filter((childId) => !idsToDelete.has(childId)),
+            },
+          ];
+        }),
+    ) as Record<NodeId, QueryNode>;
 
     return { ...state, nodes };
   }
