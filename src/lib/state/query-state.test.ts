@@ -118,4 +118,88 @@ describe("parseImportedQueryState", () => {
       error: "Imported query has malformed or cyclic nodes.",
     });
   });
+
+  it("rejects malformed imported rule payloads", () => {
+    const result = parseImportedQueryState(
+      JSON.stringify({
+        sourceId: "users",
+        rootId: "group-root",
+        nodes: {
+          "group-root": {
+            id: "group-root",
+            kind: "group",
+            logic: "AND",
+            collapsed: false,
+            childIds: ["rule-bad"],
+          },
+          "rule-bad": {
+            id: "rule-bad",
+            kind: "rule",
+            field: "age",
+            operator: "contains",
+            value: "18",
+          },
+        },
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Imported query has malformed or cyclic nodes.",
+    });
+  });
+
+  it("rejects unreachable nodes in imported trees", () => {
+    const state = createInitialQueryState("users");
+    const result = parseImportedQueryState(
+      JSON.stringify({
+        ...state,
+        nodes: {
+          ...state.nodes,
+          "rule-orphan": {
+            id: "rule-orphan",
+            kind: "rule",
+            field: "name",
+            operator: "contains",
+            value: "Ada",
+          },
+        },
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Imported query contains unreachable nodes.",
+    });
+  });
+
+  it("rejects duplicate child references in imported trees", () => {
+    const result = parseImportedQueryState(
+      JSON.stringify({
+        sourceId: "users",
+        rootId: "group-root",
+        nodes: {
+          "group-root": {
+            id: "group-root",
+            kind: "group",
+            logic: "AND",
+            collapsed: false,
+            childIds: ["rule-name", "rule-name"],
+          },
+          "rule-name": {
+            id: "rule-name",
+            kind: "rule",
+            field: "name",
+            operator: "contains",
+            value: "Ada",
+          },
+        },
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Imported query has malformed or cyclic nodes.",
+    });
+  });
 });
