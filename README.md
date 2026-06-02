@@ -107,7 +107,7 @@ Expected deployment setup:
 - Install command: `pnpm install`.
 - Framework preset: Next.js.
 
-The live URL should be added here after the Vercel project is connected.
+**Live URL:** [https://queryforge-iota.vercel.app/](https://queryforge-iota.vercel.app/)
 
 ## Trade-Offs
 

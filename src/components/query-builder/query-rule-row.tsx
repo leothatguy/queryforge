@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import { getOperatorsForField, operatorDefinitions } from "@/lib/query/operators";
 import type { DataSource, QueryRuleNode, QueryScalar, QueryValue } from "@/lib/query/types";
 import type { QueryAction } from "@/lib/state/query-state";
@@ -207,7 +209,7 @@ function ValueControl({ rule, source, dispatch }: QueryRuleRowProps) {
   );
 }
 
-export function QueryRuleRow({ rule, source, dispatch }: QueryRuleRowProps) {
+export const QueryRuleRow = memo(function QueryRuleRow({ rule, source, dispatch }: QueryRuleRowProps) {
   const field = getFieldByKey(source.fields, rule.field) ?? source.fields[0];
   const operatorOptions = getOperatorsForField(field.type);
 
@@ -256,4 +258,4 @@ export function QueryRuleRow({ rule, source, dispatch }: QueryRuleRowProps) {
       </button>
     </div>
   );
-}
+});

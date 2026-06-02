@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { DataSource, NodeId, QueryGroupNode } from "@/lib/query/types";
 import type { QueryAction } from "@/lib/state/query-state";
 import { QueryRuleRow } from "./query-rule-row";
@@ -14,7 +14,7 @@ interface QueryGroupProps {
   depth?: number;
 }
 
-export function QueryGroup({
+export const QueryGroup = memo(function QueryGroup({
   groupId,
   rootId,
   source,
@@ -144,4 +144,4 @@ export function QueryGroup({
       ) : null}
     </div>
   );
-}
+});
