@@ -5,6 +5,7 @@ export type OperatorInputKind = "single" | "list" | "range" | "none";
 export interface OperatorDefinition {
   key: OperatorKey;
   label: string;
+  symbol: string;
   input: OperatorInputKind;
   appliesTo: FieldType[];
 }
@@ -12,79 +13,92 @@ export interface OperatorDefinition {
 export const operatorDefinitions: Record<OperatorKey, OperatorDefinition> = {
   equals: {
     key: "equals",
-    label: "Equals",
+    label: "Equals (=)",
+    symbol: "=",
     input: "single",
     appliesTo: ["string", "number", "enum", "date", "boolean"],
   },
   notEquals: {
     key: "notEquals",
-    label: "Not equals",
+    label: "Not equals (!=)",
+    symbol: "!=",
     input: "single",
     appliesTo: ["string", "number", "enum", "date", "boolean"],
   },
   contains: {
     key: "contains",
-    label: "Contains",
+    label: "Contains (⊃)",
+    symbol: "⊃",
     input: "single",
     appliesTo: ["string", "enum"],
   },
   startsWith: {
     key: "startsWith",
-    label: "Starts with",
+    label: "Starts with (^)",
+    symbol: "^",
     input: "single",
     appliesTo: ["string"],
   },
   greaterThan: {
     key: "greaterThan",
-    label: "Greater than",
+    label: "Greater than (>)",
+    symbol: ">",
     input: "single",
     appliesTo: ["number"],
   },
   lessThan: {
     key: "lessThan",
-    label: "Less than",
+    label: "Less than (<)",
+    symbol: "<",
     input: "single",
     appliesTo: ["number"],
   },
   inArray: {
     key: "inArray",
-    label: "In array",
+    label: "In array ([])",
+    symbol: "[]",
     input: "list",
     appliesTo: ["string", "number", "enum"],
   },
   between: {
     key: "between",
-    label: "Between",
+    label: "Between (↔)",
+    symbol: "↔",
     input: "range",
     appliesTo: ["number", "date"],
   },
   regex: {
     key: "regex",
-    label: "Regex",
+    label: "Regex (.*)",
+    symbol: ".*",
     input: "single",
     appliesTo: ["string"],
   },
   isNull: {
     key: "isNull",
-    label: "Is null",
+    label: "Is null (∅)",
+    symbol: "∅",
     input: "none",
     appliesTo: ["string", "number", "enum", "date", "boolean"],
   },
   isNotNull: {
     key: "isNotNull",
-    label: "Is not null",
+    label: "Is not null (!∅)",
+    symbol: "!∅",
     input: "none",
     appliesTo: ["string", "number", "enum", "date", "boolean"],
   },
   before: {
     key: "before",
-    label: "Before",
+    label: "Before (←)",
+    symbol: "←",
     input: "single",
     appliesTo: ["date"],
   },
   after: {
     key: "after",
-    label: "After",
+    label: "After (→)",
+    symbol: "→",
     input: "single",
     appliesTo: ["date"],
   },

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
+import { Plus, FolderPlus, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import type { DataSource, NodeId, QueryGroupNode } from "@/lib/query/types";
 import type { QueryAction } from "@/lib/state/query-state";
 import { QueryRuleRow } from "./query-rule-row";
@@ -14,7 +15,7 @@ interface QueryGroupProps {
   depth?: number;
 }
 
-export function QueryGroup({
+export const QueryGroup = memo(function QueryGroup({
   groupId,
   rootId,
   source,
@@ -32,7 +33,7 @@ export function QueryGroup({
   const canRemove = group.id !== rootId;
 
   return (
-    <div className="group" style={{ marginLeft: depth ? 8 : 0 }}>
+    <div className="qb-group" data-depth={depth} style={{ marginLeft: depth ? 8 : 0 }}>
       <div className="group-header">
         <div className="group-meta">
           <select
@@ -54,33 +55,37 @@ export function QueryGroup({
         </div>
         <div className="toolbar">
           <button
-            className="button-secondary"
+            className="icon-button"
+            title="Add Rule"
             type="button"
             onClick={() => dispatch({ type: "add-rule", parentId: group.id })}
           >
-            Add Rule
-          </button>
-          <button
-            className="button-secondary"
-            type="button"
-            onClick={() => dispatch({ type: "add-group", parentId: group.id })}
-          >
-            Add Group
+            <Plus className="w-4 h-4" />
           </button>
           <button
             className="icon-button"
+            title="Add Group"
+            type="button"
+            onClick={() => dispatch({ type: "add-group", parentId: group.id })}
+          >
+            <FolderPlus className="w-4 h-4" />
+          </button>
+          <button
+            className="icon-button"
+            title={group.collapsed ? "Expand" : "Collapse"}
             type="button"
             onClick={() => dispatch({ type: "toggle-group", groupId: group.id })}
           >
-            {group.collapsed ? "Expand" : "Collapse"}
+            {group.collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </button>
           {canRemove ? (
             <button
-              className="button-danger"
+              className="icon-button text-red-500 hover:text-red-400 hover:bg-red-500/10"
+              title="Remove Group"
               type="button"
               onClick={() => dispatch({ type: "remove-node", nodeId: group.id })}
             >
-              Remove
+              <Trash2 className="w-4 h-4" />
             </button>
           ) : null}
         </div>
@@ -144,4 +149,4 @@ export function QueryGroup({
       ) : null}
     </div>
   );
-}
+});

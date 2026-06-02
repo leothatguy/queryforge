@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { Save, Trash2, RotateCcw, Upload, Play, Plus, FolderPlus, Copy, Check } from "lucide-react";
 import { executeQuery } from "@/lib/query/evaluate";
 import { generateSqlQuery, stringifyMongoQuery } from "@/lib/query/generate";
 import type { QueryRow, QueryTreeState } from "@/lib/query/types";
@@ -36,7 +38,6 @@ export function QueryBuilderShell() {
   const [state, dispatch] = useReducer(queryReducer, undefined, () =>
     createInitialQueryState("users"),
   );
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [results, setResults] = useState<QueryRow[]>([]);
   const [hasExecuted, setHasExecuted] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -45,6 +46,7 @@ export function QueryBuilderShell() {
   const [hasLoadedSavedPresets, setHasLoadedSavedPresets] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
+  const [isCopied, setIsCopied] = useState(false);
 
   const source = getDataSourceById(state.sourceId) ?? dataSources[0];
   const validationIssues = useMemo(() => validateQueryState(state, source), [source, state]);
@@ -75,10 +77,6 @@ export function QueryBuilderShell() {
       ].slice(0, 8));
     }, 320);
   }, [source, state, validationIssues.length]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -154,34 +152,33 @@ export function QueryBuilderShell() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">QF</span>
+        <Link href="/" className="brand" style={{ textDecoration: "none" }}>
+          <img 
+            src="/logo.png" 
+            alt="QueryForge Logo" 
+            className="brand-mark object-cover" 
+          />
           <div>
             <h1>QueryForge</h1>
             <p>Visual query builder</p>
           </div>
-        </div>
+        </Link>
         <div className="toolbar">
-          <button
-            className="button-secondary"
-            type="button"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          >
-            {theme === "light" ? "Dark" : "Light"}
-          </button>
           <button
             className="button"
             disabled={isExecuting || validationIssues.length > 0}
             type="button"
             onClick={executeCurrentQuery}
+            style={{ display: 'flex', gap: '8px' }}
           >
-            Execute
+            <Play className="w-4 h-4" /> Execute
           </button>
         </div>
       </header>
 
-      <div className="workspace">
-        <aside className="panel">
+      <div className="ide-layout">
+        <div className="ide-main">
+          <aside className="panel ide-sidebar">
           <SchemaSelector
             onChange={(sourceId) => {
               setResults([]);
@@ -195,25 +192,25 @@ export function QueryBuilderShell() {
             <div className="panel-title">Presets</div>
             <ul className="preset-list">
               {activePresets.map((preset) => (
-                <li className="preset-item" key={preset.id}>
+                <li className="preset-item" key={preset.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+                  <span className="text-sm font-medium">{preset.label}</span>
                   <button
-                    className="button-secondary"
+                    className="icon-button"
+                    title="Restore Preset"
                     type="button"
-                    onClick={() => {
-                      restoreQueryState(preset.createState());
-                    }}
+                    onClick={() => restoreQueryState(preset.createState())}
                   >
-                    {preset.label}
+                    <RotateCcw className="w-4 h-4" />
                   </button>
                 </li>
               ))}
             </ul>
           </div>
           <div className="panel-section">
-            <div className="panel-title">
-              Saved Presets
-              <button className="button-secondary" type="button" onClick={saveCurrentQueryPreset}>
-                Save
+            <div className="panel-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span>Saved Presets</span>
+              <button className="icon-button" title="Save Preset" type="button" onClick={saveCurrentQueryPreset}>
+                <Save className="w-4 h-4" />
               </button>
             </div>
             {activeSavedPresets.length === 0 ? (
@@ -221,21 +218,23 @@ export function QueryBuilderShell() {
             ) : null}
             <ul className="preset-list">
               {activeSavedPresets.map((preset) => (
-                <li className="preset-item" key={preset.id}>
-                  <div className="inline-fields">
-                    <span>{preset.label}</span>
+                <li className="preset-item" key={preset.id} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span className="text-sm font-semibold">{preset.label}</span>
                     <span className="type-pill">{source.label}</span>
                   </div>
-                  <div className="toolbar">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
                       className="button-secondary"
+                      style={{ flex: 1, display: 'flex', gap: '8px' }}
                       type="button"
                       onClick={() => restoreQueryState(preset.state)}
                     >
-                      Restore
+                      <RotateCcw className="w-4 h-4" /> Restore
                     </button>
                     <button
-                      className="button-danger"
+                      className="icon-button text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                      title="Delete Preset"
                       type="button"
                       onClick={() =>
                         setSavedPresets((items) =>
@@ -243,7 +242,7 @@ export function QueryBuilderShell() {
                         )
                       }
                     >
-                      Delete
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </li>
@@ -251,29 +250,84 @@ export function QueryBuilderShell() {
             </ul>
           </div>
           <div className="panel-section">
-            <div className="panel-title">History</div>
+            <div className="panel-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span>History</span>
+              {history.length > 0 && (
+                <button 
+                  className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 font-medium transition-colors bg-red-500/5 hover:bg-red-500/10 px-2 py-1 rounded"
+                  onClick={() => setHistory([])}
+                  title="Clear all history"
+                >
+                  <Trash2 className="w-3 h-3" /> Clear
+                </button>
+              )}
+            </div>
             {history.length === 0 ? <div className="empty-state">No history.</div> : null}
             <ul className="history-list">
               {history.map((item) => (
-                <li className="history-item" key={item.id}>
-                  <div className="inline-fields">
-                    <span>{item.label}</span>
-                    <span className="count-pill">{item.resultCount}</span>
+                <li className="history-item" key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className="count-pill">{item.resultCount} results</span>
                   </div>
-                  <button
-                    className="button-secondary"
-                    type="button"
-                    onClick={() => dispatch({ type: "replace-state", state: item.state })}
-                  >
-                    Restore
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="button-secondary"
+                      style={{ flex: 1, display: 'flex', gap: '8px', justifyContent: 'center' }}
+                      type="button"
+                      onClick={() => dispatch({ type: "replace-state", state: item.state })}
+                    >
+                      <RotateCcw className="w-4 h-4" /> Restore State
+                    </button>
+                    <button
+                      className="icon-button text-red-500 hover:bg-red-500/10 hover:border-red-500/30 transition-all duration-300"
+                      type="button"
+                      title="Delete history entry"
+                      onClick={() => setHistory((items) => items.filter((h) => h.id !== item.id))}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
+          <div className="panel-section">
+            <div className="panel-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span>Export (JSON)</span>
+              <button 
+                className={`icon-button transition-all duration-300 ${isCopied ? "text-green-400 border-green-500/50 bg-green-500/10" : ""}`} 
+                title={isCopied ? "Copied!" : "Copy JSON"} 
+                type="button" 
+                onClick={() => {
+                  navigator.clipboard.writeText(exportText);
+                  setIsCopied(true);
+                  setTimeout(() => setIsCopied(false), 2000);
+                }}
+              >
+                {isCopied ? <Check className="w-4 h-4 scale-110" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <textarea className="textarea" readOnly value={exportText} />
+          </div>
+          <div className="panel-section">
+            <div className="panel-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span>Import</span>
+              <button className="icon-button" title="Import JSON" type="button" onClick={importQuery}>
+                <Upload className="w-4 h-4" />
+              </button>
+            </div>
+            <textarea
+              className="textarea"
+              placeholder="Paste JSON here..."
+              value={importText}
+              onChange={(event) => setImportText(event.target.value)}
+            />
+            {importError ? <p className="issue-item" style={{ marginTop: '8px' }}>{importError}</p> : null}
+          </div>
         </aside>
 
-        <section className="panel builder-panel">
+        <section className="panel ide-canvas builder-panel">
           <div className="builder-header">
             <div>
               <h2>{source.label}</h2>
@@ -284,18 +338,20 @@ export function QueryBuilderShell() {
                 {validationIssues.length ? "Needs fixes" : "Valid"}
               </span>
               <button
-                className="button-secondary"
+                className="icon-button"
+                title="Add Root Rule"
                 type="button"
                 onClick={() => dispatch({ type: "add-rule", parentId: state.rootId })}
               >
-                Add Root Rule
+                <Plus className="w-4 h-4" />
               </button>
               <button
-                className="button-secondary"
+                className="icon-button"
+                title="Add Root Group"
                 type="button"
                 onClick={() => dispatch({ type: "add-group", parentId: state.rootId })}
               >
-                Add Root Group
+                <FolderPlus className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -309,8 +365,10 @@ export function QueryBuilderShell() {
             />
           </div>
         </section>
+        </div>
 
-        <aside className="panel inspector-panel">
+        <div className="ide-bottom-panel">
+          <aside className="panel" style={{ display: "flex", flexDirection: "column" }}>
           <QueryPreview mongo={mongoPreview} sql={sqlPreview} />
           <div className="panel-section">
             <div className="panel-title">Validation</div>
@@ -326,29 +384,17 @@ export function QueryBuilderShell() {
               </ul>
             )}
           </div>
-          <ResultsPanel
-            hasExecuted={hasExecuted}
-            isExecuting={isExecuting}
-            results={results}
-            source={source}
-          />
-          <div className="panel-section">
-            <div className="panel-title">Export</div>
-            <textarea className="textarea" readOnly value={exportText} />
-          </div>
-          <div className="panel-section">
-            <div className="panel-title">Import</div>
-            <textarea
-              className="textarea"
-              value={importText}
-              onChange={(event) => setImportText(event.target.value)}
+          </aside>
+
+          <div className="panel" style={{ display: "flex", flexDirection: "column" }}>
+            <ResultsPanel
+              hasExecuted={hasExecuted}
+              isExecuting={isExecuting}
+              results={results}
+              source={source}
             />
-            {importError ? <p className="issue-item">{importError}</p> : null}
-            <button className="button-secondary" type="button" onClick={importQuery}>
-              Import JSON
-            </button>
           </div>
-        </aside>
+        </div>
       </div>
     </main>
   );

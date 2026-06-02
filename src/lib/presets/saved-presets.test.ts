@@ -30,7 +30,7 @@ describe("saved query presets", () => {
         createdAt: "2026-06-02T00:00:00.000Z",
         state,
       },
-      {
+      { 
         id: "cyclic",
         label: "Cyclic",
         sourceId: "users",

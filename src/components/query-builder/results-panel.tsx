@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { paginateRows, sortQueryRows, type ResultSort } from "@/lib/query/results";
 import type { DataSource, QueryRow } from "@/lib/query/types";
 
@@ -11,7 +11,7 @@ interface ResultsPanelProps {
   hasExecuted: boolean;
 }
 
-export function ResultsPanel({ source, results, isExecuting, hasExecuted }: ResultsPanelProps) {
+export const ResultsPanel = memo(function ResultsPanel({ source, results, isExecuting, hasExecuted }: ResultsPanelProps) {
   const visibleFields = source.fields.slice(0, 6);
   const [sort, setSort] = useState<ResultSort>({
     field: visibleFields[0]?.key ?? "id",
@@ -111,4 +111,4 @@ export function ResultsPanel({ source, results, isExecuting, hasExecuted }: Resu
       ) : null}
     </div>
   );
-}
+});

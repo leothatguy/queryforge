@@ -1,5 +1,8 @@
 "use client";
 
+import { memo } from "react";
+import { Trash2, ChevronDown } from "lucide-react";
+
 import { getOperatorsForField, operatorDefinitions } from "@/lib/query/operators";
 import type { DataSource, QueryRuleNode, QueryScalar, QueryValue } from "@/lib/query/types";
 import type { QueryAction } from "@/lib/state/query-state";
@@ -207,7 +210,7 @@ function ValueControl({ rule, source, dispatch }: QueryRuleRowProps) {
   );
 }
 
-export function QueryRuleRow({ rule, source, dispatch }: QueryRuleRowProps) {
+export const QueryRuleRow = memo(function QueryRuleRow({ rule, source, dispatch }: QueryRuleRowProps) {
   const field = getFieldByKey(source.fields, rule.field) ?? source.fields[0];
   const operatorOptions = getOperatorsForField(field.type);
 
@@ -227,33 +230,47 @@ export function QueryRuleRow({ rule, source, dispatch }: QueryRuleRowProps) {
           </option>
         ))}
       </select>
-      <select
-        aria-label="Operator"
-        className="select"
-        value={rule.operator}
-        onChange={(event) =>
-          dispatch({
-            type: "update-rule-operator",
-            nodeId: rule.id,
-            operator: event.target.value as QueryRuleNode["operator"],
-          })
-        }
-      >
-        {operatorOptions.map((operator) => (
-          <option key={operator.key} value={operator.key}>
-            {operator.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative flex items-center w-full">
+        <div className="select flex items-center justify-between pointer-events-none w-full !pr-3">
+           <span className="text-[#3b82f6]">
+             <span className="md:hidden font-bold text-lg">
+               {operatorDefinitions[rule.operator]?.symbol || "="}
+             </span>
+             <span className="hidden md:inline font-bold text-sm whitespace-nowrap">
+               {operatorDefinitions[rule.operator]?.label || "Equals (=)"}
+             </span>
+           </span>
+           <ChevronDown className="w-4 h-4 text-gray-500 shrink-0 ml-2" />
+        </div>
+        <select
+          aria-label="Operator"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          value={rule.operator}
+          onChange={(event) =>
+            dispatch({
+              type: "update-rule-operator",
+              nodeId: rule.id,
+              operator: event.target.value as QueryRuleNode["operator"],
+            })
+          }
+        >
+          {operatorOptions.map((operator) => (
+            <option key={operator.key} value={operator.key}>
+              {operator.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <ValueControl dispatch={dispatch} rule={rule} source={source} />
       <button
         aria-label="Remove rule"
-        className="icon-button"
+        title="Remove rule"
+        className="icon-button text-red-500 hover:text-red-400 hover:bg-red-500/10"
         type="button"
         onClick={() => dispatch({ type: "remove-node", nodeId: rule.id })}
       >
-        Remove
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   );
-}
+});
