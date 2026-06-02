@@ -2,6 +2,7 @@ import {
   getDefaultOperatorForField,
   getDefaultValueForOperator,
   isOperatorAllowedForField,
+  operatorDefinitions,
 } from "@/lib/query/operators";
 import type {
   DataSource,
@@ -385,9 +386,17 @@ export function parseImportedQueryState(raw: string) {
       return { ok: false as const, error: "Imported JSON must be an object." };
     }
 
-    if (typeof parsed.sourceId !== "string" || !getDataSourceById(parsed.sourceId)) {
+    if (typeof parsed.sourceId !== "string") {
       return { ok: false as const, error: "Imported query references an unknown data source." };
     }
+
+    const source = getDataSourceById(parsed.sourceId);
+
+    if (!source) {
+      return { ok: false as const, error: "Imported query references an unknown data source." };
+    }
+
+    const activeSource: DataSource = source;
 
     if (typeof parsed.rootId !== "string" || !parsed.nodes || typeof parsed.nodes !== "object") {
       return { ok: false as const, error: "Imported query is missing a root or node map." };
@@ -401,6 +410,7 @@ export function parseImportedQueryState(raw: string) {
 
     const visiting = new Set<NodeId>();
     const visited = new Set<NodeId>();
+    const referenced = new Set<NodeId>([parsed.rootId]);
 
     function visit(nodeId: NodeId): boolean {
       if (visiting.has(nodeId)) {
@@ -420,16 +430,41 @@ export function parseImportedQueryState(raw: string) {
       visiting.add(nodeId);
 
       if (node.kind === "group") {
-        if (!Array.isArray(node.childIds)) {
+        if (
+          (node.logic !== "AND" && node.logic !== "OR") ||
+          typeof node.collapsed !== "boolean" ||
+          !Array.isArray(node.childIds)
+        ) {
           return false;
         }
 
         for (const childId of node.childIds) {
+          if (referenced.has(childId)) {
+            return false;
+          }
+
+          referenced.add(childId);
+
           if (typeof childId !== "string" || !visit(childId)) {
             return false;
           }
         }
-      } else if (node.kind !== "rule") {
+      } else if (node.kind === "rule") {
+        const field =
+          typeof node.field === "string"
+            ? getFieldByKey(activeSource.fields, node.field)
+            : undefined;
+
+        if (
+          !field ||
+          typeof node.operator !== "string" ||
+          !operatorDefinitions[node.operator as keyof typeof operatorDefinitions] ||
+          !isOperatorAllowedForField(node.operator, field.type) ||
+          !("value" in node)
+        ) {
+          return false;
+        }
+      } else {
         return false;
       }
 
@@ -442,10 +477,14 @@ export function parseImportedQueryState(raw: string) {
       return { ok: false as const, error: "Imported query has malformed or cyclic nodes." };
     }
 
+    if (Object.keys(parsed.nodes).length !== visited.size) {
+      return { ok: false as const, error: "Imported query contains unreachable nodes." };
+    }
+
     return {
       ok: true as const,
       state: {
-        sourceId: parsed.sourceId,
+        sourceId: activeSource.id,
         rootId: parsed.rootId,
         nodes: parsed.nodes as Record<NodeId, QueryNode>,
         nextId: typeof parsed.nextId === "number" ? parsed.nextId : visited.size + 1,
